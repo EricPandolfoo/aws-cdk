@@ -70,10 +70,23 @@
         </dependency>
 
         <dependency>
+            <groupId>software.amazon.awscdk</groupId>
+            <artifactId>rds</artifactId>
+            <version>${cdk.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
           <groupId>org.junit.jupiter</groupId>
           <artifactId>junit-jupiter</artifactId>
           <version>${junit.version}</version>
           <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awscdk</groupId>
+            <artifactId>rds</artifactId>
+            <version>1.147.0</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

@@ -11,16 +11,24 @@ public class AwsProjectCdkApp {
         App app = new App();
 
         //VPC
-       VpcStack vpc = new VpcStack(app, "Vpc");
+       VpcStack vpcStack = new VpcStack(app, "Vpc");
 
 
        //Cluster do ECS
-        ClusterStack cluster = new ClusterStack(app, "Cluster", vpc.getVpc());
-        cluster.addDependency(vpc);
+        ClusterStack clusterStack = new ClusterStack(app, "Cluster", vpcStack.getVpc());
+        clusterStack.addDependency(vpcStack);
+
+        //RDS
+        RdsStack rdsStack = new RdsStack(app, "Rds", vpcStack.getVpc());
+        rdsStack.addDependency(vpcStack);
+
+        //SNS TOPIC
+        SnsStack snsStack = new SnsStack(app, "Sns");
 
         //Service01
-        Service01Stack service01Stack = new Service01Stack(app, "Service01", cluster.getCluster());
-        service01Stack.addDependency(cluster);
+        Service01Stack service01Stack = new Service01Stack(app, "Service01", clusterStack.getCluster());
+        service01Stack.addDependency(clusterStack);
+        service01Stack.addDependency(rdsStack);
 
         app.synth();
     }
