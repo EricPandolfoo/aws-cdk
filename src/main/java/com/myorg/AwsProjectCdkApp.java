@@ -32,9 +32,11 @@ public class AwsProjectCdkApp {
         service01Stack.addDependency(rdsStack);
         service01Stack.addDependency(snsStack);
 
-        //Service01
+        //Service02
         Service02Stack service02Stack = new Service02Stack(app, "Service02",
-                clusterStack.getCluster());
+                clusterStack.getCluster(), snsStack.getProductEventsTopic());
+        service02Stack.addDependency(clusterStack);
+        service02Stack.addDependency(snsStack);
 
         app.synth();
     }

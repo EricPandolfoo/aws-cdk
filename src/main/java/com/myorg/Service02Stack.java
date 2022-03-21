@@ -8,18 +8,43 @@ import software.amazon.awscdk.services.ecs.patterns.ApplicationLoadBalancedTaskI
 import software.amazon.awscdk.services.elasticloadbalancingv2.HealthCheck;
 import software.amazon.awscdk.services.events.targets.SnsTopic;
 import software.amazon.awscdk.services.logs.LogGroup;
+import software.amazon.awscdk.services.sns.subscriptions.SqsSubscription;
+import software.amazon.awscdk.services.sqs.DeadLetterQueue;
+import software.amazon.awscdk.services.sqs.Queue;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class Service02Stack extends Stack {
 
-    public Service02Stack(final Construct scope, final String id, Cluster cluster) {
-        this(scope, id, null, cluster);
+    public Service02Stack(final Construct scope, final String id, Cluster cluster, SnsTopic productEventsTopic) {
+        this(scope, id, null, cluster, productEventsTopic);
     }
 
-    public Service02Stack(final Construct scope, final String id, final StackProps props, Cluster cluster) {
+    public Service02Stack(final Construct scope, final String id, final StackProps props, Cluster cluster, SnsTopic productEventsTopic) {
         super(scope, id, props);
+
+
+        //Construcao da fila "comum" que vai se tornar uma DLQ - Dead Letter Queue
+        Queue productEventsDlq = Queue.Builder.create(this, "ProductEventsDlq")
+                .queueName("product-events-dlq")
+                .build();
+
+        //Criando a DLQ
+        DeadLetterQueue deadLetterQueue = DeadLetterQueue.builder()
+                .queue(productEventsDlq)
+                .maxReceiveCount(3)
+                .build();
+
+        //Fila principal
+        Queue productEventsQueue = Queue.Builder.create(this, "ProductEvents")
+                .queueName("product-events")
+                .deadLetterQueue(deadLetterQueue)
+                .build();
+
+        //Inscrevendo a fila no tópico SNS criado.
+        SqsSubscription sqsSubscription = SqsSubscription.Builder.create(productEventsQueue).build();
+        productEventsTopic.getTopic().addSubscription(sqsSubscription);
 
 
         //Variáveis de ambiente que vão estar no container para acesso ao banco de dados RDS
@@ -27,6 +52,7 @@ public class Service02Stack extends Stack {
         // (foram criadas as variáveis também no application.properties da aplicação, projeto aws_project01)
         Map<String, String> envVariables = new HashMap<>();
         envVariables.put("AWS_REGION", "us-east-1");
+        envVariables.put("AWS_SQS_QUEUE_PRODUCT_EVENTS_NAME", productEventsQueue.getQueueName());
 
 
         //Criação do container + imagem do container que está no DockerHub
@@ -42,7 +68,7 @@ public class Service02Stack extends Stack {
                 .taskImageOptions(
                         ApplicationLoadBalancedTaskImageOptions.builder()
                                 .containerName("aws_project")
-                                .image(ContainerImage.fromRegistry("pandolfo/curso_aws_microservice02:1.0.0"))
+                                .image(ContainerImage.fromRegistry("pandolfo/curso_aws_microservice02:1.2.0"))
                                 .containerPort(9090)
                                 .logDriver(LogDriver.awsLogs(AwsLogDriverProps.builder()
                                         .logGroup(LogGroup.Builder.create(this, "Service02LogGroup")
@@ -78,6 +104,9 @@ public class Service02Stack extends Stack {
                 .scaleOutCooldown(Duration.seconds(60))
                 .build());
 
+
+        //Permissão para a task ecs do serviço02 consumir a fila sqs
+        productEventsQueue.grantConsumeMessages(service02.getTaskDefinition().getTaskRole());
 
 
 
