@@ -85,7 +85,25 @@
         <dependency>
             <groupId>software.amazon.awscdk</groupId>
             <artifactId>rds</artifactId>
-            <version>1.147.0</version>
+            <version>${cdk.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awscdk</groupId>
+            <artifactId>dynamodb</artifactId>
+            <version>${cdk.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awscdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${cdk.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awscdk</groupId>
+            <artifactId>s3-notifications</artifactId>
+            <version>${cdk.version}</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

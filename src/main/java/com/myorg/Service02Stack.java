@@ -2,6 +2,7 @@ package com.myorg;
 
 import software.amazon.awscdk.core.*;
 import software.amazon.awscdk.services.applicationautoscaling.EnableScalingProps;
+import software.amazon.awscdk.services.dynamodb.Table;
 import software.amazon.awscdk.services.ecs.*;
 import software.amazon.awscdk.services.ecs.patterns.ApplicationLoadBalancedFargateService;
 import software.amazon.awscdk.services.ecs.patterns.ApplicationLoadBalancedTaskImageOptions;
@@ -17,11 +18,13 @@ import java.util.Map;
 
 public class Service02Stack extends Stack {
 
-    public Service02Stack(final Construct scope, final String id, Cluster cluster, SnsTopic productEventsTopic) {
-        this(scope, id, null, cluster, productEventsTopic);
+    public Service02Stack(final Construct scope, final String id, Cluster cluster, SnsTopic productEventsTopic,
+                          Table productEventDdb) {
+        this(scope, id, null, cluster, productEventsTopic, productEventDdb);
     }
 
-    public Service02Stack(final Construct scope, final String id, final StackProps props, Cluster cluster, SnsTopic productEventsTopic) {
+    public Service02Stack(final Construct scope, final String id, final StackProps props, Cluster cluster,
+                          SnsTopic productEventsTopic, Table productEventDdb) {
         super(scope, id, props);
 
 
@@ -29,20 +32,19 @@ public class Service02Stack extends Stack {
         Queue productEventsDlq = Queue.Builder.create(this, "ProductEventsDlq")
                 .queueName("product-events-dlq")
                 .build();
-
         //Criando a DLQ
         DeadLetterQueue deadLetterQueue = DeadLetterQueue.builder()
                 .queue(productEventsDlq)
                 .maxReceiveCount(3)
                 .build();
-
         //Fila principal
         Queue productEventsQueue = Queue.Builder.create(this, "ProductEvents")
                 .queueName("product-events")
                 .deadLetterQueue(deadLetterQueue)
                 .build();
 
-        //Inscrevendo a fila no tópico SNS criado.
+
+        //Inscrevendo a fila no tópico SNS criado (trigger).
         SqsSubscription sqsSubscription = SqsSubscription.Builder.create(productEventsQueue).build();
         productEventsTopic.getTopic().addSubscription(sqsSubscription);
 
@@ -108,6 +110,8 @@ public class Service02Stack extends Stack {
         //Permissão para a task ecs do serviço02 consumir a fila sqs
         productEventsQueue.grantConsumeMessages(service02.getTaskDefinition().getTaskRole());
 
+        //Permissão para a task ecs do serviço02 de leitura e escrita no DynamoDB
+        productEventDdb.grantReadWriteData(service02.getTaskDefinition().getTaskRole());
 
 
     }
